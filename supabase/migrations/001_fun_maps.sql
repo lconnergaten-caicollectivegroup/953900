@@ -1,0 +1,14 @@
+create extension if not exists pgcrypto;
+create table if not exists public.profiles (id uuid primary key references auth.users(id) on delete cascade, organization_id uuid not null default gen_random_uuid(), display_name text, role text not null default 'rep' check (role in ('platform_admin','client_admin','rep')), created_at timestamptz not null default now());
+create table if not exists public.leads (id uuid primary key default gen_random_uuid(), owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade, company text not null, contact_name text not null, stage text not null default 'Prospect' check(stage in ('Prospect','Contacted','Discovery','Proposal','Won')), value numeric(12,2) not null default 0 check(value >= 0), neighborhood text not null, next_step text not null default 'Make first contact', created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+alter table public.profiles enable row level security;
+alter table public.leads enable row level security;
+create policy "profiles_select_own" on public.profiles for select to authenticated using (id=auth.uid());
+create policy "profiles_update_own" on public.profiles for update to authenticated using (id=auth.uid()) with check(id=auth.uid());
+create policy "leads_select_own" on public.leads for select to authenticated using(owner_id=auth.uid());
+create policy "leads_insert_own" on public.leads for insert to authenticated with check(owner_id=auth.uid());
+create policy "leads_update_own" on public.leads for update to authenticated using(owner_id=auth.uid()) with check(owner_id=auth.uid());
+create policy "leads_delete_own" on public.leads for delete to authenticated using(owner_id=auth.uid());
+create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path=public as $$ begin insert into public.profiles(id,display_name) values(new.id,coalesce(new.raw_user_meta_data->>'display_name',split_part(new.email,'@',1))); return new; end; $$;
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
