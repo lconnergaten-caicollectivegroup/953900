@@ -2,6 +2,10 @@
 
 Authenticated, ADHD-supportive 30-day sales workspace for the San Diego Fun Maps team.
 
+The approved pilot workspace is source-controlled at `public/workspace/index.html`
+and is published at `/workspace`. Build version `1.1.0` clarifies access approval
+language and the complete sales-stage model without changing the approved layout.
+
 ## Features
 - Supabase email/password authentication
 - Lead and pipeline tracking
